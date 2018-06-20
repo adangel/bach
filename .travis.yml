@@ -2,9 +2,9 @@ sudo: false
 dist: trusty
 language: java
 
-os:
-- linux
-- osx
+#os:
+#- linux
+#- osx
 
 before_install:
 # https://github.com/travis-ci/travis-ci/issues/8408
@@ -13,7 +13,7 @@ before_install:
 - unset -f cd
 
 install:
-- . ./install-jdk.sh --verbose
+- . ./install-jdk.sh --verbose --url https://github.com/AdoptOpenJDK/openjdk10-openj9-nightly/releases/download/jdk-10.0.1%2B10-201819061532/OpenJDK10-OPENJ9_x64_Linux_201819061532.tar.gz
 
 script:
 - java --version
