@@ -13,7 +13,7 @@ before_install:
 - unset -f cd
 
 install:
-- . ./install-jdk.sh --verbose --url https://api.adoptopenjdk.net/openjdk10/nightly/x64_linux/latest/binary
+- . ./install-jdk.sh --verbose --url $(curl --silent https://api.adoptopenjdk.net/openjdk10/nightly/x64_linux/latest/ | grep 'binary_link' | grep -Eo '(http|https)://[^"]+')
 
 script:
 - java --version
