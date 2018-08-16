@@ -1,0 +1,71 @@
+# from https://raw.githubusercontent.com/sormuras/sormuras.github.io/master/.travis.yml
+
+language: java
+sudo: false
+dist: trusty
+
+before_script:
+- unset -v _JAVA_OPTIONS
+#https://github.com/sormuras/bach/raw/master/install-jdk.sh
+- wget https://raw.githubusercontent.com/adangel/bach/macosx-dmg-windows-zip/install-jdk.sh -O install-jdk.sh
+
+jobs:
+  include:
+
+  - stage: ☕ jdk.java.net - OpenJDK - GPL - Linux
+    env: JDK=9
+    script: source install-jdk.sh -F 9
+    os: linux
+  - # stage: ...
+    env: JDK=10
+    script: source install-jdk.sh -F 10
+    os: linux
+  - # stage: ...
+    env: JDK=11
+    script: source install-jdk.sh -F 11
+    os: linux
+  - # stage: ...
+    env: JDK=12
+    script: source install-jdk.sh -F 12
+    os: linux
+
+  - stage: ☕ jdk.java.net - OpenJDK - GPL - MacOSX
+    env: JDK=9
+    script: source install-jdk.sh -F 9
+    os: osx
+  - # stage: ...
+    env: JDK=10
+    script: source install-jdk.sh -F 10
+    os: osx
+  - # stage: ...
+    env: JDK=11
+    script: source install-jdk.sh -F 11
+    os: osx
+  - # stage: ...
+    env: JDK=12
+    script: source install-jdk.sh -F 12
+    os: osx
+
+  - stage: 🍰 jdk.java.net/oracle.com - Oracle JDK - BCL - Linux
+    env: JDK=10
+    script: source install-jdk.sh -F 10 -L BCL
+    os: linux
+  - # stage: ...
+    env: JDK=11
+    script: source install-jdk.sh -F 11 -L BCL
+    os: linux
+
+  - stage: 🍰 jdk.java.net/oracle.com - Oracle JDK - BCL - MacOSX
+    env: JDK=10
+    script: source install-jdk.sh -F 10 -L BCL
+    os: osx
+  - # stage: ...
+    env: JDK=11
+    script: source install-jdk.sh -F 11 -L BCL
+    os: osx
+
+after_script:
+- echo JAVA_HOME = ${JAVA_HOME}
+- echo PATH = ${PATH}
+- ls ${JAVA_HOME}
+- java -version
