@@ -31,6 +31,7 @@ function initialize() {
     emit_java_home=false
 
     feature='ea'
+    version='?'
     license='GPL'
     os='?'
     url='?'
@@ -192,18 +193,28 @@ function determine_url() {
     local DOWNLOAD='https://download.java.net/java'
     local ORACLE='http://download.oracle.com/otn-pub/java/jdk'
 
+    local ext
+    case "${feature}-${os}-${license}" in
+            *-osx-x64-BCL) ext='dmg';;
+        *-windows-x64-BCL) ext='exe';;
+        9-windows-x64-GPL) ext='tar.gz';;
+       10-windows-x64-GPL) ext='tar.gz';;
+        *-windows-x64-GPL) ext='zip';;
+                        *) ext='tar.gz';;
+    esac
+
     # Archived feature or official GA build?
     case "${feature}-${license}" in
-        9-GPL) url="${DOWNLOAD}/GA/jdk9/9.0.4/binaries/openjdk-9.0.4_${os}_bin.tar.gz"; return;;
-        9-BCL) url="${ORACLE}/9.0.4+11/c2514751926b4512b076cc82f959763f/jdk-9.0.4_${os}_bin.tar.gz"; return;;
-       10-GPL) url="${DOWNLOAD}/GA/jdk10/10.0.2/19aef61b38124481863b1413dce1855f/13/openjdk-10.0.2_${os}_bin.tar.gz"; return;;
-       10-BCL) url="${ORACLE}/10.0.2+13/19aef61b38124481863b1413dce1855f/jdk-10.0.2_${os}_bin.tar.gz"; return;;
+        9-GPL) version='9.0.4'; url="${DOWNLOAD}/GA/jdk9/${version}/binaries/openjdk-${version}_${os}_bin.${ext}"; return;;
+        9-BCL) version='9.0.4'; url="${ORACLE}/${version}+11/c2514751926b4512b076cc82f959763f/jdk-${version}_${os}_bin.${ext}"; return;;
+       10-GPL) version='10.0.2'; url="${DOWNLOAD}/GA/jdk10/${version}/19aef61b38124481863b1413dce1855f/13/openjdk-${version}_${os}_bin.${ext}"; return;;
+       10-BCL) version='10.0.2'; url="${ORACLE}/${version}+13/19aef61b38124481863b1413dce1855f/jdk-${version}_${os}_bin.${ext}"; return;;
     esac
 
     # EA or RC build?
     local JAVA_NET="http://jdk.java.net/${feature}"
     local candidates=$(wget --quiet --output-document - ${JAVA_NET} | grep -Eo 'href[[:space:]]*=[[:space:]]*"[^\"]+"' | grep -Eo '(http|https)://[^"]+')
-    url=$(echo "${candidates}" | grep -Eo "${DOWNLOAD}/.+/jdk${feature}/.+/${license}/.*jdk-${feature}.+${os}_bin.tar.gz$" || true)
+    url=$(echo "${candidates}" | grep -Eo "${DOWNLOAD}/.+/jdk${feature}/.+/${license}/.*jdk-${feature}.+${os}_bin.${ext}$" || true)
 
     if [[ -z ${url} ]]; then
         script_exit "Couldn't determine a download url for ${feature}-${license} on ${os}" 1
@@ -227,6 +238,11 @@ function prepare_variables() {
         license='<overridden by custom url>'
         os='<overridden by custom url>'
     fi
+
+    if [[ ${version} == '?' ]]; then
+        version=${feature}
+    fi
+
     archive="${workspace}/$(basename ${url})"
     status=$(curl -o /dev/null --silent --head --write-out %{http_code} ${url})
 }
@@ -242,21 +258,8 @@ Variables:
   archive = ${archive}
 EOF
 }
-
-function download_and_extract_and_set_target() {
-    local quiet='--quiet'; if [[ ${verbose} == true ]]; then quiet=''; fi
-    local local="--directory-prefix ${workspace}"
-    local remote='--timestamping --continue'
-    local wget_options="${quiet} ${local} ${remote}"
+function extract_tar() {
     local tar_options="--file ${archive}"
-
-    say "Downloading JDK from ${url}..."
-    verbose "Using wget options: ${wget_options}"
-    if [[ ${license} == 'GPL' ]]; then
-        wget ${wget_options} ${url}
-    else
-        wget ${wget_options} --header "Cookie: oraclelicense=accept-securebackup-cookie" ${url}
-    fi
 
     verbose "Using tar options: ${tar_options}"
     if [[ ${target} == '?' ]]; then
@@ -275,6 +278,37 @@ function download_and_extract_and_set_target() {
             tar --extract ${tar_options} -C "${target}" --strip-components=4 # . / <jdk> / Contents / Home
         fi
     fi
+}
+
+function install_dmg() {
+    verbose "Installing ${archive}"
+
+    hdiutil attach ${archive}
+    sudo installer -pkg "/Volumes/JDK ${version}/JDK ${version}.pkg" -target /
+    diskutil umount "/Volumes/JDK ${version}"
+
+    target="/Library/Java/JavaVirtualMachines/jdk-${version}.jdk/Contents/Home"
+}
+
+function download_and_extract_and_set_target() {
+    local quiet='--quiet'; if [[ ${verbose} == true ]]; then quiet=''; fi
+    local local="--directory-prefix ${workspace}"
+    local remote='--timestamping --continue'
+    local wget_options="${quiet} ${local} ${remote}"
+
+    say "Downloading JDK from ${url}..."
+    verbose "Using wget options: ${wget_options}"
+    if [[ ${license} == 'GPL' ]]; then
+        wget ${wget_options} ${url}
+    else
+        wget ${wget_options} --header "Cookie: oraclelicense=accept-securebackup-cookie" ${url}
+    fi
+
+    case "${archive}" in
+        *.tar.gz) extract_tar;;
+           *.dmg) install_dmg;;
+               *) script_exit 'Unknown archive format' 1;;
+    esac
 
     if [[ ${verbose} == true ]]; then
         echo "Set target to: ${target}"
